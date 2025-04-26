@@ -177,6 +177,8 @@ local function playRecording()
 		original.eventignore = opt.eventignore:get()
 		opt.eventignore = perf.autocmdEventsIgnore
 
+		vim.defer_fn(function() M.disable_plugins(config.performanceOpts.plugins) end, 0)
+
 		-- if notification is shown, defer to ensure it is displayed
 		local count = v.count1 -- counts needs to be saved due to scoping by defer_fn
 		vim.defer_fn(function()
@@ -187,6 +189,7 @@ local function playRecording()
 			opt.eventignore = original.eventignore
 		end, 500)
 
+		M.enable_plugins(config.performanceOpts.plugins)
 	-- macro (regular)
 	else
 		normal(v.count1 .. "@" .. reg)
@@ -292,6 +295,7 @@ end
 ---@field lazyredraw boolean :h lazyredraw
 ---@field noSystemClipboard boolean no `*` or `+` in clipboard https://vi.stackexchange.com/a/31888
 ---@field autocmdEventsIgnore string[] list of autocmd events to ignore
+---@field plugins plugins list of plugins to disable
 
 ---@class maps
 ---@field startStopRecording string
@@ -301,6 +305,14 @@ end
 ---@field deleteAllMacros string
 ---@field switchSlot string
 ---@field addBreakPoint string
+
+---@class plugins
+---@field illuminate boolean
+---@field matchparen boolean
+---@field treesitter boolean
+---@field indent_blankline boolean
+---@field syntax boolean
+---@field filetype boolean
 
 ---@param userConfig configObj
 function M.setup(userConfig)
@@ -332,6 +344,14 @@ function M.setup(userConfig)
 			noSystemClipboard = true,
 			-- stylua: ignore
 			autocmdEventsIgnore = { "TextChangedI", "TextChanged", "InsertLeave", "InsertEnter", "InsertCharPre" },
+			plugins = {
+				illuminate = false,
+				matchparen = false,
+				treesitter = false,
+				indent_blankline = false,
+				syntax = false,
+				filetype = false,
+			},
 		},
 	}
 	config = vim.tbl_deep_extend("keep", userConfig, defaultConfig)
@@ -421,6 +441,87 @@ function M.displaySlots()
 	if output == "[ ]" then return "" end
 	local icon = useNerdfontIcons and "󰃽 " or "RECs "
 	return icon .. output
+end
+
+local treesitter_backup = {}
+local treesitter_disabled = false
+
+local syntax_backup = {}
+local syntax_disabled = false
+
+local filetype_backup = {}
+local filetype_disabled = false
+
+function M.enable_plugins(plugins)
+	if plugins.illuminate then vim.cmd("IlluminatePauseBuf") end
+	if plugins.matchparen then vim.cmd("DoMatchParen") end
+	if plugins.treesitter then
+		local status_ok, _ = pcall(require, "nvim-treesitter.configs")
+		if not status_ok then return end
+
+		if vim.fn.exists(":TSBufEnable") ~= 2 then return end
+
+		if treesitter_disabled == true then
+			-- Return treesitter module state from backup
+			for _, mod_state in ipairs(treesitter_backup) do
+				if mod_state.enable then vim.cmd("TSBufEnable " .. mod_state.mod_name) end
+			end
+			treesitter_disabled = false
+		end
+	end
+	if plugins.indent_blankline then vim.cmd("IBLEnable") end
+	if plugins.syntax then
+		if syntax_disabled == true then
+			vim.opt_local.syntax = syntax_backup.syntax
+			syntax_disabled = false
+		end
+	end
+	if plugins.filetype then
+		if filetype_disabled == true then
+			vim.opt_local.filetype = filetype_backup.filetype
+			filetype_disabled = false
+		end
+	end
+end
+
+function M.disable_plugins(plugins)
+	if plugins.illuminate then vim.cmd("IlluminateResumeBuf") end
+	if plugins.matchparen then vim.cmd("NoMatchParen") end
+	if plugins.treesitter then
+		local status_ok, ts_config = pcall(require, "nvim-treesitter.configs")
+		if not status_ok then return end
+
+		if vim.fn.exists(":TSBufDisable") ~= 2 then return end
+
+		-- Backup current treesitter module "enable" state
+		if treesitter_disabled == false then
+			for _, mod_name in ipairs(ts_config.available_modules()) do
+				local module_config = ts_config.get_module(mod_name) or {}
+				table.insert(treesitter_backup, { mod_name = mod_name, enable = module_config.enable })
+			end
+			treesitter_disabled = true
+		end
+
+		for _, mod_name in ipairs(ts_config.available_modules()) do
+			vim.cmd("TSBufDisable " .. mod_name)
+		end
+	end
+	if plugins.indent_blankline then vim.cmd("IBLDisable") end
+	if plugins.syntax then
+		if syntax_disabled == false then
+			syntax_backup.syntax = vim.opt_local.syntax
+			syntax_disabled = true
+		end
+		vim.cmd("syntax clear")
+		vim.opt_local.syntax = "off"
+	end
+	if plugins.filetype then
+		if filetype_disabled == false then
+			filetype_backup.filetype = vim.opt_local.filetype
+			filetype_disabled = true
+		end
+		vim.opt_local.filetype = ""
+	end
 end
 
 --------------------------------------------------------------------------------

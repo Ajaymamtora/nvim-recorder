@@ -116,6 +116,14 @@ require("recorder").setup {
 			"InsertEnter",
 			"InsertCharPre",
 		},
+	    plugins = {
+	       illuminate = false,
+	       matchparen = false,
+	       treesitter = false,
+	       indent_blankline = false,
+	       syntax = false,
+	       filetype = false,
+	    },
 	},
 
 	-- [experimental] partially share keymaps with nvim-dap.
