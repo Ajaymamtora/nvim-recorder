@@ -6,7 +6,7 @@ local opt = vim.opt
 local keymap = vim.keymap.set
 
 -- internal vars
-local config, macroRegs, slotIndex, defaultLogLevel, breakCounter, firstRun
+local config, macroRegs, slotIndex, defaultLogLevel, breakCounter, firstRun, originalClipboard
 
 -- Use this function to normalize keycodes (which can have multiple
 -- representations, e.g. <C-f> or <C-F>).
@@ -65,6 +65,10 @@ local function toggleRecording()
 
 	-- start recording
 	if not isRecording() then
+		if config.noSystemClipboardWhileRecording then
+			originalClipboard = opt.clipboard:get()
+			opt.clipboard = ""
+		end
 		breakCounter = 0 -- reset break points
 		normal("q" .. reg)
 		notify("Recording to [" .. reg .. "]…", "essential")
@@ -74,6 +78,10 @@ local function toggleRecording()
 	-- stop recording
 	local prevRec = getMacro(macroRegs[slotIndex])
 	normal("q")
+	if originalClipboard then
+		opt.clipboard = originalClipboard
+		originalClipboard = nil
+	end
 
 	-- NOTE the macro key records itself, so it has to be removed from the
 	-- register. As this function has to know the variable length of the
@@ -254,9 +262,7 @@ local function yankMacro()
 	macroContent = macroContent:gsub(vim.pesc(breakPointKey), "")
 
 	local clipboardOpt = opt.clipboard:get() ---@diagnostic disable-line: undefined-field
-	local useSystemClipb = #clipboardOpt > 0
-		and clipboardOpt[1]:find("unnamed")
-		and not config.noSystemClipboardWhileRecording
+	local useSystemClipb = #clipboardOpt > 0 and clipboardOpt[1]:find("unnamed")
 	local copyToReg = useSystemClipb and "+" or '"'
 
 	fn.setreg(copyToReg, macroContent)
