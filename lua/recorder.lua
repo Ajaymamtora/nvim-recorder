@@ -254,7 +254,9 @@ local function yankMacro()
 	macroContent = macroContent:gsub(vim.pesc(breakPointKey), "")
 
 	local clipboardOpt = opt.clipboard:get() ---@diagnostic disable-line: undefined-field
-	local useSystemClipb = #clipboardOpt > 0 and clipboardOpt[1]:find("unnamed")
+	local useSystemClipb = #clipboardOpt > 0
+		and clipboardOpt[1]:find("unnamed")
+		and not config.noSystemClipboardWhileRecording
 	local copyToReg = useSystemClipb and "+" or '"'
 
 	fn.setreg(copyToReg, macroContent)
@@ -287,6 +289,7 @@ end
 ---@field logLevel integer log level (vim.log.levels)
 ---@field lessNotifications boolean plugin is less verbose, shows only essential or critical notifications
 ---@field performanceOpts perfOpts various performance options
+---@field noSystemClipboardWhileRecording boolean no `*` or `+` in clipboard https://vi.stackexchange.com/a/31888
 ---@field dapSharedKeymaps boolean (experimental) partially share keymaps with dap
 ---@field useNerdfontIcons boolean currently only relevant for status bar components
 
@@ -338,6 +341,7 @@ function M.setup(userConfig)
 		logLevel = vim.log.levels.INFO,
 		lessNotifications = false,
 		useNerdfontIcons = true,
+		noSystemClipboardWhileRecording = false,
 		performanceOpts = {
 			countThreshold = 100,
 			lazyredraw = true,
