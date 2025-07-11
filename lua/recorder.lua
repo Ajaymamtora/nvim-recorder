@@ -141,6 +141,24 @@ local function playRecording()
 	local hasBreakPoints = fn.keytrans(macro):find(vim.pesc(breakPointKey))
 	local usePerfOptimizations = v.count1 >= perf.countThreshold
 
+	-- Store original registers and disable system clipboard during macro playback
+	local savedRegs = {}
+	if config.noSystemClipboardWhileRecording then
+		-- Save current register state
+		savedRegs.clipboard = opt.clipboard:get()
+		savedRegs.unnamed = fn.getreg('"')
+		savedRegs.yank = fn.getreg('0')
+		savedRegs.plus = fn.getreg('+')
+		savedRegs.star = fn.getreg('*')
+		
+		-- Disable system clipboard
+		opt.clipboard = ""
+		
+		-- Clear system clipboard registers to prevent contamination
+		fn.setreg('+', '')
+		fn.setreg('*', '')
+	end
+
 	-- macro (w/ breakpoints)
 	if hasBreakPoints and not countGiven then
 		breakCounter = breakCounter + 1
@@ -152,21 +170,9 @@ local function playRecording()
 
 		local partialMacro = macroParts[breakCounter]
 
-		-- temporarily disable system clipboard during playback if configured
-		local tempClipboard
-		if config.noSystemClipboardWhileRecording then
-			tempClipboard = opt.clipboard:get()
-			opt.clipboard = ""
-		end
-
 		setMacro(reg, partialMacro)
 		normal("@" .. reg)
 		setMacro(reg, macro) -- restore original macro for all other purposes like prewing slots
-
-		-- restore clipboard setting
-		if tempClipboard then
-			opt.clipboard = tempClipboard
-		end
 
 		if breakCounter ~= #macroParts then
 			notify("Reached Breakpoint #" .. tostring(breakCounter), "essential")
@@ -190,9 +196,11 @@ local function playRecording()
 			original.lazyredraw = opt.lazyredraw:get() ---@diagnostic disable-line: undefined-field
 			opt.lazyredraw = true
 		end
-		if perf.noSystemclipboard then
-			original.clipboard = opt.clipboard:get() ---@diagnostic disable-line: undefined-field
-			opt.clipboard = ""
+		if perf.noSystemclipboard or config.noSystemClipboardWhileRecording then
+			if not config.noSystemClipboardWhileRecording then
+				original.clipboard = opt.clipboard:get() ---@diagnostic disable-line: undefined-field
+				opt.clipboard = ""
+			end
 		end
 		original.eventignore = opt.eventignore:get()
 		opt.eventignore = perf.autocmdEventsIgnore
@@ -205,26 +213,25 @@ local function playRecording()
 			normal(count .. "@" .. reg)
 
 			if perf.lazyredraw then vim.opt.lazyredraw = original.lazyredraw end
-			if perf.noSystemclipboard then opt.clipboard = original.clipboard end
+			if perf.noSystemclipboard and not config.noSystemClipboardWhileRecording then
+				opt.clipboard = original.clipboard
+			end
 			opt.eventignore = original.eventignore
 		end, 500)
 
 		M.enable_plugins(config.performanceOpts.plugins)
 	-- macro (regular)
 	else
-		-- temporarily disable system clipboard during playback if configured
-		local tempClipboard
-		if config.noSystemClipboardWhileRecording then
-			tempClipboard = opt.clipboard:get()
-			opt.clipboard = ""
-		end
-
 		normal(v.count1 .. "@" .. reg)
+	end
 
-		-- restore clipboard setting
-		if tempClipboard then
-			opt.clipboard = tempClipboard
-		end
+	-- Restore original register state and clipboard setting
+	if config.noSystemClipboardWhileRecording then
+		opt.clipboard = savedRegs.clipboard
+		fn.setreg('"', savedRegs.unnamed)
+		fn.setreg('0', savedRegs.yank)
+		fn.setreg('+', savedRegs.plus)
+		fn.setreg('*', savedRegs.star)
 	end
 end
 
