@@ -152,9 +152,21 @@ local function playRecording()
 
 		local partialMacro = macroParts[breakCounter]
 
+		-- temporarily disable system clipboard during playback if configured
+		local tempClipboard
+		if config.noSystemClipboardWhileRecording then
+			tempClipboard = opt.clipboard:get()
+			opt.clipboard = ""
+		end
+
 		setMacro(reg, partialMacro)
 		normal("@" .. reg)
 		setMacro(reg, macro) -- restore original macro for all other purposes like prewing slots
+
+		-- restore clipboard setting
+		if tempClipboard then
+			opt.clipboard = tempClipboard
+		end
 
 		if breakCounter ~= #macroParts then
 			notify("Reached Breakpoint #" .. tostring(breakCounter), "essential")
@@ -200,7 +212,19 @@ local function playRecording()
 		M.enable_plugins(config.performanceOpts.plugins)
 	-- macro (regular)
 	else
+		-- temporarily disable system clipboard during playback if configured
+		local tempClipboard
+		if config.noSystemClipboardWhileRecording then
+			tempClipboard = opt.clipboard:get()
+			opt.clipboard = ""
+		end
+
 		normal(v.count1 .. "@" .. reg)
+
+		-- restore clipboard setting
+		if tempClipboard then
+			opt.clipboard = tempClipboard
+		end
 	end
 end
 
