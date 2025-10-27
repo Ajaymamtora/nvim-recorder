@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     name: README.md to vimdoc
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: git pull # fix failure when multiple commits are pushed in succession
       - run: mkdir -p doc
 
@@ -32,7 +32,7 @@ jobs:
 
       - run: git pull
       - name: push changes
-        uses: stefanzweifel/git-auto-commit-action@v6
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "chore: auto-generate vimdocs"
           branch: ${{ github.head_ref }}
