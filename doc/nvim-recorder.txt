@@ -1,4 +1,4 @@
-*nvim-recorder.txt*           For Neovim          Last change: 2025 October 13
+*nvim-recorder.txt*           For Neovim          Last change: 2025 October 27
 
 ==============================================================================
 Table of Contents                            *nvim-recorder-table-of-contents*
@@ -61,7 +61,7 @@ INSTALLATION ~
         dependencies = "rcarriga/nvim-notify", -- optional
         opts = {}, -- required even with default settings, since it calls `setup()`
     },
-
+    
     -- packer
     use {
         "chrisgrieser/nvim-recorder",
@@ -82,12 +82,12 @@ CONFIGURATION ~
         -- The first register is the default register used as macro-slot after
         -- startup.
         slots = { "a", "b" },
-
-        -- specify one of options:
+    
+        -- specify one of options: 
         -- [static]   -> use static slots, this is default behaviour
         -- [rotate]   -> rotates through letters specified in slots[]
         dynamicSlots = "static",
-
+    
         mapping = {
             startStopRecording = "q",
             playMacro = "Q",
@@ -98,22 +98,22 @@ CONFIGURATION ~
             -- ⚠️ this should be a string you don't use in insert mode during a macro
             addBreakPoint = "##",
         },
-
+    
         -- Clears all macros-slots on startup.
         clear = false,
-
+    
         -- Log level used for non-critical notifications; mostly relevant for nvim-notify.
         -- (Note that by default, nvim-notify does not show the levels `trace` & `debug`.)
         logLevel = vim.log.levels.INFO, -- :help vim.log.levels
-
+    
         -- If enabled, only essential notifications are sent.
         -- If you do not use a plugin like nvim-notify, set this to `true`
         -- to remove otherwise annoying messages.
         lessNotifications = false,
-
+    
         -- Use nerdfont icons in the status bar components and keymap descriptions
         useNerdfontIcons = true,
-
+    
         -- Performance optimizations for macros with high count. When `playMacro` is
         -- triggered with a count higher than the threshold, nvim-recorder
         -- temporarily changes changes some settings for the duration of the macro.
@@ -128,16 +128,16 @@ CONFIGURATION ~
                 "InsertEnter",
                 "InsertCharPre",
             },
-	    plugins = {
-	       illuminate = false,
-	       matchparen = false,
-	       treesitter = false,
-	       indent_blankline = false,
-	       syntax = false,
-	       filetype = false,
-	    },
+            plugins = {
+               illuminate = false,
+               matchparen = false,
+               treesitter = false,
+               indent_blankline = false,
+               syntax = false,
+               filetype = false,
+            },
         },
-
+    
         -- [experimental] partially share keymaps with nvim-dap.
         -- (See README for further explanations.)
         dapSharedKeymaps = false,
@@ -154,7 +154,7 @@ STATUS LINE COMPONENTS ~
     -- Indicates whether you are currently recording. Useful if you are using
     -- `cmdheight=0`, where recording-status is not visible.
     require("recorder").recordingStatus()
-
+    
     -- Displays non-empty macro-slots (registers) and indicates the selected ones.
     -- Only displayed when *not* recording. Slots with breakpoints get an extra `#`.
     require("recorder").displaySlots()
@@ -287,12 +287,12 @@ lazy-loading it should not have a big impact.
                     playMacro = "Q",
                 },
             })
-
+    
                 local lualineZ = require("lualine").get_config().sections.lualine_z or {}
                 local lualineY = require("lualine").get_config().sections.lualine_y or {}
                 table.insert(lualineZ, { require("recorder").recordingStatus })
                 table.insert(lualineY, { require("recorder").displaySlots })
-
+    
                 require("lualine").setup {
                     tabline = {
                         lualine_y = lualineY,
