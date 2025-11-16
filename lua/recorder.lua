@@ -147,16 +147,16 @@ local function playRecording()
 		-- Save current register state
 		savedRegs.clipboard = opt.clipboard:get()
 		savedRegs.unnamed = fn.getreg('"')
-		savedRegs.yank = fn.getreg('0')
-		savedRegs.plus = fn.getreg('+')
-		savedRegs.star = fn.getreg('*')
-		
+		savedRegs.yank = fn.getreg("0")
+		savedRegs.plus = fn.getreg("+")
+		savedRegs.star = fn.getreg("*")
+
 		-- Disable system clipboard
 		opt.clipboard = ""
-		
+
 		-- Clear system clipboard registers to prevent contamination
-		fn.setreg('+', '')
-		fn.setreg('*', '')
+		fn.setreg("+", "")
+		fn.setreg("*", "")
 	end
 
 	-- macro (w/ breakpoints)
@@ -181,6 +181,15 @@ local function playRecording()
 			breakCounter = 0
 		end
 
+		-- Restore clipboard for breakpoint path
+		if config.noSystemClipboardWhileRecording then
+			opt.clipboard = savedRegs.clipboard
+			fn.setreg('"', savedRegs.unnamed)
+			fn.setreg("0", savedRegs.yank)
+			fn.setreg("+", savedRegs.plus)
+			fn.setreg("*", savedRegs.star)
+		end
+
 	-- macro (w/ perf optimizations)
 	elseif usePerfOptimizations then
 		-- message to avoid confusion by the user due to performance optimizations
@@ -196,11 +205,9 @@ local function playRecording()
 			original.lazyredraw = opt.lazyredraw:get() ---@diagnostic disable-line: undefined-field
 			opt.lazyredraw = true
 		end
-		if perf.noSystemclipboard or config.noSystemClipboardWhileRecording then
-			if not config.noSystemClipboardWhileRecording then
-				original.clipboard = opt.clipboard:get() ---@diagnostic disable-line: undefined-field
-				opt.clipboard = ""
-			end
+		if perf.noSystemclipboard and not config.noSystemClipboardWhileRecording then
+			original.clipboard = opt.clipboard:get() ---@diagnostic disable-line: undefined-field
+			opt.clipboard = ""
 		end
 		original.eventignore = opt.eventignore:get()
 		opt.eventignore = perf.autocmdEventsIgnore
@@ -217,21 +224,31 @@ local function playRecording()
 				opt.clipboard = original.clipboard
 			end
 			opt.eventignore = original.eventignore
+
+			M.enable_plugins(config.performanceOpts.plugins)
+
+			-- CRITICAL: Restore clipboard AFTER macro completes (inside defer_fn)
+			if config.noSystemClipboardWhileRecording then
+				opt.clipboard = savedRegs.clipboard
+				fn.setreg('"', savedRegs.unnamed)
+				fn.setreg("0", savedRegs.yank)
+				fn.setreg("+", savedRegs.plus)
+				fn.setreg("*", savedRegs.star)
+			end
 		end, 500)
 
-		M.enable_plugins(config.performanceOpts.plugins)
 	-- macro (regular)
 	else
 		normal(v.count1 .. "@" .. reg)
-	end
 
-	-- Restore original register state and clipboard setting
-	if config.noSystemClipboardWhileRecording then
-		opt.clipboard = savedRegs.clipboard
-		fn.setreg('"', savedRegs.unnamed)
-		fn.setreg('0', savedRegs.yank)
-		fn.setreg('+', savedRegs.plus)
-		fn.setreg('*', savedRegs.star)
+		-- Restore clipboard for regular path
+		if config.noSystemClipboardWhileRecording then
+			opt.clipboard = savedRegs.clipboard
+			fn.setreg('"', savedRegs.unnamed)
+			fn.setreg("0", savedRegs.yank)
+			fn.setreg("+", savedRegs.plus)
+			fn.setreg("*", savedRegs.star)
+		end
 	end
 end
 
